@@ -4,7 +4,7 @@
   "description": "Интеллектуальное управление TODO-комментариями (TODO, FIXME, BUG, NOTE) в VS Code",
   "version": "1.0.0",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
@@ -14,37 +14,92 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "intelligent-tasks-activitybar",
+          "title": "Intelligent Tasks",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "intelligent-tasks-activitybar": [ 
         {
           "id": "intelligentTasksView",
-          "name": "Intelligent Tasks"
+          "name": "Intelligent Tasks",
+          "icon": "$(list-ordered)",
+          "contextualTitle": "Intelligent Tasks"
         }
       ]
     },
     "commands": [
       {
         "command": "intelligentTasks.scanWorkspace",
-        "title": "Сканировать рабочее пространство"
+        "title": "Сканировать рабочее пространство",
+        "category": "Intelligent Tasks",
+        "icon": "$(refresh)"
       },
       {
         "command": "intelligentTasks.markAsDone",
-        "title": "Отметить задачу как выполненную"
+        "title": "Отметить как выполненную/невыполненную",
+        "category": "Intelligent Tasks",
+        "icon": "$(check)"
+      },
+      {
+        "command": "intelligentTasks.filterByType",
+        "title": "Фильтровать по типу",
+        "category": "Intelligent Tasks",
+        "icon": "$(filter)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "intelligentTasks.scanWorkspace",
+          "when": "view == intelligentTasksView",
+          "group": "navigation"
+        },
+        {
+          "command": "intelligentTasks.filterByType",
+          "when": "view == intelligentTasksView",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [ 
+        {
+          "command": "intelligentTasks.markAsDone",
+          "when": "view == intelligentTasksView && viewItem == taskItem",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
       "title": "Intelligent Tasks",
       "properties": {
         "intelligentTasks.todoPatterns": {
           "type": "array",
+          "items": {
+            "type": "string"
+          },
           "default": [
             "TODO",
             "FIXME",
             "BUG",
             "NOTE"
           ],
-          "description": "Теги, которые будут отслеживаться"
+          "description": "Список тегов (регистронезависимо), которые будут отслеживаться плагином"
+        },
+        "intelligentTasks.scanOnStartup": {
+            "type": "boolean",
+            "default": true,
+            "description": "Автоматически сканировать задачи при запуске VS Code."
+        },
+        "intelligentTasks.autoRefreshOnSave": {
+            "type": "boolean",
+            "default": true,
+            "description": "Автоматически обновлять список задач при сохранении файла в рабочей области."
         }
       }
     }
@@ -57,7 +112,7 @@
   },
   "devDependencies": {
     "@types/node": "^18",
-    "@types/vscode": "^1.100.0",
+    "@types/vscode": "^1.80.0",
     "eslint": "^8.0.0",
     "mocha": "^10.0.0",
     "ts-loader": "^9.5.2",
