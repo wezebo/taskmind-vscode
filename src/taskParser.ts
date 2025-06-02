@@ -11,14 +11,39 @@ function configuredTaskTags(): string[] {
 }
 
 function buildTaskRegex(): RegExp {
-    const tags = configuredTaskTags();
-    // Пример: 
-    // TODO: Исправить баг
-    // FIXME(low): Низкий приоритет
-    // BUG(high): Критичный баг
-    const pattern = `(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*(${tags.join('|')})\\s*(?:\\(\\s*(${VALID_PRIORITIES.join('|')})\\s*\\))?\\s*[:\\s]?(.*)`;
-    return new RegExp(pattern, 'gi'); // g - глобальный поиск, i - регистронезависимый
+    const tags = configuredTaskTags();    
+    const commentPrefixes = [
+        '\\/\\/',    // //
+        '#',         // #
+        '\\/\\*',    // /*
+        '<!--',      // <!--
+        ';',         // ;
+        '--',        // --
+        '%',         // %
+        '\\*'        // * (для строк внутри блочных комментариев)
+    ].join('|');
+
+    const pattern =
+        `(?:^\\s*|[^\\w$])` +                         // 1. Начало строки или не-словесный символ
+        `(?:${commentPrefixes})` +                    // 2. Префикс комментария
+        `\\s*` +                                      // 3. Пробелы
+        `(${tags.join('|')})` +                       // 4. ГРУППА 1: Тег
+        `\\b` +                                       // 5. Граница слова
+        `\\s*` +                                      // 6. Пробелы
+        `(?:\\(\\s*(${VALID_PRIORITIES.join('|')})\\s*\\))?` + // 7. ГРУППА 2 (внутри): Приоритет
+        `\\s*[:\\s]?` +                               // 8. Двоеточие/пробелы
+        `(.*)`;                                       // 9. ГРУППА 3: Текст задачи
+
+    return new RegExp(pattern, 'gmi');
 }
+
+// // TODO: обычный комментарий
+// # FIXME(high): питоновский стиль
+// /* BUG: блочный комментарий */
+// -- NOTE: SQL-комментарий
+// % REMARK: LaTeX
+// * NOTE: Javadoc
+// <!-- TODO: HTML -->
 
 export async function scanWorkspaceForTasks(): Promise<Task[]> {
     const tasks: Task[] = [];
