@@ -1,16 +1,22 @@
 import * as vscode from 'vscode';
 import { Task } from './models';
 
+const DEFAULT_PRIORITY = 'medium';
+const VALID_PRIORITIES = ['low', 'medium', 'high'];
+
 function configuredTaskTags(): string[] {
     const config = vscode.workspace.getConfiguration('intelligentTasks');
-    return config.get<string[]>('todoPatterns') || ['TODO', 'FIXME', 'BUG', 'NOTE'];
+    const patterns = config.get<string[]>('todoPatterns');
+    return Array.isArray(patterns) ? patterns : ['TODO', 'FIXME', 'BUG', 'NOTE'];
 }
 
 function buildTaskRegex(): RegExp {
     const tags = configuredTaskTags();
-    // (любой из стандартных префиксов комментария) + (пробелы) + (ОДИН ИЗ ТЕГОВ) + (граница слова) + (опциональное двоеточие и пробелы) + (текст задачи)
-    // Пример: // TODO: Исправить баг
-    const pattern = `(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*(${tags.join('|')})\\b(?:[:\\s]+)(.*)`;
+    // Пример: 
+    // TODO: Исправить баг
+    // FIXME(low): Низкий приоритет
+    // BUG(high): Критичный баг
+    const pattern = `(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*(${tags.join('|')})\\s*(?:\\(\\s*(${VALID_PRIORITIES.join('|')})\\s*\\))?\\s*[:\\s]?(.*)`;
     return new RegExp(pattern, 'gi'); // g - глобальный поиск, i - регистронезависимый
 }
 
@@ -37,7 +43,8 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                 taskRegex.lastIndex = 0;
                 while ((match = taskRegex.exec(line.text)) !== null) {
                     const tagType = match[1].toUpperCase();
-                    let taskText = match[2].trim();
+                    const parsedPriority = match[2] ? match[2].toLowerCase() : DEFAULT_PRIORITY;
+                    let taskText = match[3].trim();
 
                     if (taskText.endsWith('*/')) {
                         taskText = taskText.substring(0, taskText.length - 2).trim();
@@ -50,7 +57,7 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                             id: `${file.fsPath}-${i}-${match.index}`,
                             text: taskText,
                             type: tagType as Task['type'],
-                            priority: 'medium',
+                            priority: (VALID_PRIORITIES.includes(parsedPriority) ? parsedPriority : DEFAULT_PRIORITY) as Task['priority'],
                             fileName: document.fileName,
                             lineNumber: i + 1,
                             isCompleted: false,

@@ -10,6 +10,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onView:intelligentTasksView",
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
@@ -51,6 +52,18 @@
         "title": "Фильтровать по типу",
         "category": "Intelligent Tasks",
         "icon": "$(filter)"
+      },
+      {
+        "command": "intelligentTasks.setPriority",
+        "title": "Intelligent Tasks: Установить приоритет",
+        "category": "Intelligent Tasks",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "intelligentTasks.filterByPriority",
+        "title": "Intelligent Tasks: Фильтровать по приоритету",
+        "category": "Intelligent Tasks",
+        "icon": "$(sort-precedence)"
       }
     ],
     "menus": {
@@ -64,6 +77,11 @@
           "command": "intelligentTasks.filterByType",
           "when": "view == intelligentTasksView",
           "group": "navigation@1"
+        },
+        {
+          "command": "intelligentTasks.filterByPriority",
+          "when": "view == intelligentTasksView",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [ 
@@ -71,6 +89,11 @@
           "command": "intelligentTasks.markAsDone",
           "when": "view == intelligentTasksView && viewItem == taskItem",
           "group": "inline"
+        },
+        {
+          "command": "intelligentTasks.setPriority",
+          "when": "view == intelligentTasksView && viewItem == taskItem",
+          "group": "modification"
         }
       ]
     },
