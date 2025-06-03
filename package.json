@@ -25,7 +25,7 @@
       ]
     },
     "views": {
-      "intelligent-tasks-activitybar": [ 
+      "intelligent-tasks-activitybar": [
         {
           "id": "intelligentTasksView",
           "name": "Intelligent Tasks",
@@ -64,6 +64,12 @@
         "title": "Intelligent Tasks: Фильтровать по приоритету",
         "category": "Intelligent Tasks",
         "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "intelligentTasks.getAISuggestion",
+        "title": "Intelligent Tasks: Получить ИИ-предложение",
+        "category": "Intelligent Tasks",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -84,7 +90,7 @@
           "group": "navigation@2"
         }
       ],
-      "view/item/context": [ 
+      "view/item/context": [
         {
           "command": "intelligentTasks.markAsDone",
           "when": "view == intelligentTasksView && viewItem == taskItem",
@@ -94,6 +100,11 @@
           "command": "intelligentTasks.setPriority",
           "when": "view == intelligentTasksView && viewItem == taskItem",
           "group": "modification"
+        },
+        {
+          "command": "intelligentTasks.getAISuggestion",
+          "when": "view == intelligentTasksView && viewItem == taskItem",
+          "group": "ai"
         }
       ]
     },
@@ -115,14 +126,24 @@
           "description": "Список тегов (регистронезависимо), которые будут отслеживаться плагином"
         },
         "intelligentTasks.scanOnStartup": {
-            "type": "boolean",
-            "default": true,
-            "description": "Автоматически сканировать задачи при запуске VS Code."
+          "type": "boolean",
+          "default": true,
+          "description": "Автоматически сканировать задачи при запуске VS Code."
         },
         "intelligentTasks.autoRefreshOnSave": {
-            "type": "boolean",
-            "default": true,
-            "description": "Автоматически обновлять список задач при сохранении файла в рабочей области."
+          "type": "boolean",
+          "default": true,
+          "description": "Автоматически обновлять список задач при сохранении файла в рабочей области."
+        },
+        "intelligentTasks.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL Ollama API"
+        },
+        "intelligentTasks.aiModel": {
+          "type": "string",
+          "default": "codellama",
+          "description": "Модель для использования в Ollama"
         }
       }
     }
@@ -132,6 +153,17 @@
     "compile": "webpack",
     "watch": "webpack --watch",
     "test": "mocha --require ts-node/register tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "ollama": "^0.5.16",
+    "@types/node": "^18",
+    "@types/vscode": "^1.80.0",
+    "eslint": "^8.0.0",
+    "mocha": "^10.0.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.0.0",
+    "webpack-cli": "^6.0.1"
   },
   "devDependencies": {
     "@types/node": "^18",

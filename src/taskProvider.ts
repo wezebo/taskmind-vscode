@@ -36,7 +36,11 @@ export class TaskItem extends vscode.TreeItem {
 
         if (taskData.status === 'done') {
             this.iconPath = new vscode.ThemeIcon('check');
-        } else {
+        }
+        else if (taskData.aiSuggestions && taskData.aiSuggestions.length > 0) {
+            this.iconPath = new vscode.ThemeIcon('sparkle');
+        }
+        else {
             switch (taskData.type.toUpperCase()) {
                 case 'TODO': this.iconPath = new vscode.ThemeIcon('checklist'); break;
                 case 'FIXME': this.iconPath = new vscode.ThemeIcon('tools'); break;
@@ -118,6 +122,22 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
             tasksToDisplay = tasksToDisplay.filter(task => (task.priority || 'N/A').toLowerCase() === this.currentFilterPriority?.toLowerCase());
         }
 
+        if (element instanceof TaskItem && element.taskData.aiSuggestions) {
+            return Promise.resolve(
+                element.taskData.aiSuggestions.map((suggestion, index) => {
+                    const item = new vscode.TreeItem(
+                        `💡 Предложение ${index + 1}`,
+                        vscode.TreeItemCollapsibleState.None
+                    );
+                    item.command = {
+                        command: 'intelligentTasks.showAISuggestion',
+                        title: 'Показать предложение ИИ',
+                        arguments: [element.taskData, suggestion]
+                    };
+                    return item;
+                })
+            );
+        }
 
         if (element instanceof GroupItem) {
             return Promise.resolve(element.children);

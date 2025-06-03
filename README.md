@@ -29,6 +29,16 @@ npx vsce package
 code --install-extension <путь к vsix>
 ```
 
+## 🤖 ИИ-интеграция
+
+Плагин поддерживает интеграцию с локальными LLM через Ollama:
+
+1. Установите [Ollama](https://ollama.ai/)
+2. Скачайте модель:
+```bash
+ollama pull codellama
+```
+
 ## 🚀 Использование
 
 - Откройте панель **Intelligent Tasks** в дереве проводника.
@@ -40,4 +50,9 @@ code --install-extension <путь к vsix>
 В `settings.json` вы можете указать теги для отслеживания:
 ```json
 "intelligentTasks.todoPatterns": ["TODO", "FIXME", "BUG", "NOTE"]
+```
+а также настройки ИИ:
+```json
+"intelligentTasks.ollamaUrl": "http://localhost:11434",
+"intelligentTasks.aiModel": "codellama"
 ```

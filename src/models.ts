@@ -8,4 +8,5 @@ export interface Task {
   isCompleted: boolean;
   createdAt: string;
   status: 'open' | 'done';
+  aiSuggestions?: string[];
 }

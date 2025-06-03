@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TaskProvider, TaskItem as ProviderTaskItem } from './taskProvider';
 import { scanWorkspaceForTasks } from './taskParser';
 import { Task } from './models';
+import { Ollama } from "ollama";
 
 let taskProvider: TaskProvider;
 const VALID_PRIORITIES_FOR_SETTING: Array<Task['priority']> = ['low', 'medium', 'high'];
@@ -16,14 +17,14 @@ async function updateTaskCommentInFile(task: Task, newPriority: Task['priority']
 
         const tagsForRegex = vscode.workspace.getConfiguration('intelligentTasks').get<string[]>('todoPatterns') || ['TODO', 'FIXME', 'BUG', 'NOTE'];
         const priorityRegexPart = `(?:\\(\\s*(?:${VALID_PRIORITIES_FOR_SETTING.join('|')})\\s*\\))?`;
-        
+
         const replaceRegex = new RegExp(
             `^(\\s*(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*${task.type.toUpperCase()}\\s*)` +
             `(${priorityRegexPart})` +
             `(\\s*[:\\s]?.+)`
             , 'i'
         );
-        
+
         let newLineText = '';
         if (newPriority && VALID_PRIORITIES_FOR_SETTING.includes(newPriority)) {
             newLineText = lineText.replace(replaceRegex, `$1(${newPriority})$3`);
@@ -33,7 +34,7 @@ async function updateTaskCommentInFile(task: Task, newPriority: Task['priority']
 
         if (newLineText === lineText && newPriority) {
              const insertRegex = new RegExp(
-                `^(\\s*(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*${task.type.toUpperCase()})` + 
+                `^(\\s*(?:\\/\\/|#|\\/\\*\\*?|<!--|%|REM|'|\\*|--|;|\\*!)\\s*${task.type.toUpperCase()})` +
                 `(\\s*[:\\s]?.+)`
                 , 'i'
             );
@@ -81,7 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
         });
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.markAsDone', async (item: vscode.TreeItem | { taskData: Task }) => {
+    context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.markAsDone', async (item: vscode.TreeItem | {
+        taskData: Task
+    }) => {
         const taskData = (item as ProviderTaskItem)?.taskData;
 
         if (taskData) {
@@ -116,8 +119,8 @@ export function activate(context: vscode.ExtensionContext) {
         const task = item.taskData;
 
         const selectedPriority = await vscode.window.showQuickPick(
-            VALID_PRIORITIES_FOR_SETTING.map(p => ({ label: p!, description: `Установить приоритет: ${p}` })),
-            { placeHolder: `Текущий приоритет: ${task.priority || 'N/A'}. Выберите новый:` }
+            VALID_PRIORITIES_FOR_SETTING.map(p => ({label: p!, description: `Установить приоритет: ${p}`})),
+            {placeHolder: `Текущий приоритет: ${task.priority || 'N/A'}. Выберите новый:`}
         );
 
         if (selectedPriority && selectedPriority.label !== task.priority) {
@@ -164,6 +167,123 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.commands.executeCommand('intelligentTasks.scanWorkspace');
         }
     }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.getAISuggestion', async (item: ProviderTaskItem) => {
+        if (!item || !item.taskData) {
+            vscode.window.showErrorMessage('Задача не выбрана.');
+            return;
+        }
+
+        const task = item.taskData;
+        const response = await getAISuggestion(task);
+
+        if (response) {
+            // Сохраняем предложение в задаче
+            const taskInProvider = taskProvider.allTasks.find(t => t.id === task.id);
+            if (taskInProvider) {
+                taskInProvider.aiSuggestions = taskInProvider.aiSuggestions || [];
+                taskInProvider.aiSuggestions.push(response);
+                taskProvider.updateTask(taskInProvider);
+            }
+
+            // Показываем пользователю
+            showSuggestionPanel(task, response);
+        }
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.showAISuggestion', (task: Task, suggestion: string) => {
+            showSuggestionPanel(task, suggestion);
+        }
+    ));
+}
+
+
+async function getAISuggestion(task: Task): Promise<string | null> {
+    try {
+        const config = vscode.workspace.getConfiguration('intelligentTasks');
+        const ollamaUrl = config.get<string>('ollamaUrl') || 'http://localhost:11434';
+        const aiModel = config.get<string>('aiModel') || 'codellama';
+
+        const ollama = new Ollama({host: ollamaUrl});
+
+        // Получаем контекст задачи
+        const document = await vscode.workspace.openTextDocument(task.fileName);
+        const startLine = Math.max(0, task.lineNumber - 3);
+        const endLine = Math.min(document.lineCount, task.lineNumber + 3);
+        let context = '';
+
+        for (let i = startLine; i < endLine; i++) {
+            context += document.lineAt(i).text + '\n';
+        }
+
+        // Формируем промпт
+        const prompt = `Ты - помощник разработчика. Проанализируй задачу и предложи решение.
+Задача: ${task.text}
+Тип: ${task.type}
+Приоритет: ${task.priority || 'не указан'}
+Контекст кода:
+\`\`\`
+${context}
+\`\`\`
+
+Предложи 1-2 конкретных решения. Будь лаконичен.`;
+
+        // Отправляем запрос
+        const response = await ollama.generate({
+            model: aiModel,
+            prompt: prompt,
+            stream: false,
+            options: {
+                temperature: 0.2,
+                num_predict: 300
+            }
+        });
+
+        return response.response;
+    } catch (error) {
+        console.error("Ошибка при обращении к Ollama:", error);
+        vscode.window.showErrorMessage(`Ошибка ИИ: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+}
+
+function showSuggestionPanel(task: Task, suggestion: string) {
+    const panel = vscode.window.createWebviewPanel(
+        'aiSuggestion',
+        `ИИ-предложение для задачи: ${task.text.substring(0, 20)}...`,
+        vscode.ViewColumn.Beside,
+        {enableScripts: true}
+    );
+
+    panel.webview.html = `<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>ИИ-предложение</title>
+        <style>
+            body { padding: 20px; font-family: sans-serif; }
+            .task-info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+            .suggestion { background: #e8f4ff; padding: 15px; border-radius: 5px; white-space: pre-wrap; }
+        </style>
+    </head>
+    <body>
+        <div class="task-info">
+            <h3>Задача: ${escapeHtml(task.text)}</h3>
+            <p>Файл: ${escapeHtml(task.fileName)}:${task.lineNumber}</p>
+            <p>Тип: ${task.type} | Приоритет: ${task.priority || 'не указан'}</p>
+        </div>
+        <div class="suggestion">${escapeHtml(suggestion)}</div>
+    </body>
+    </html>`;
+}
+
+function escapeHtml(unsafe: string): string {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 export function deactivate() {
