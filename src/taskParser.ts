@@ -11,7 +11,7 @@ function configuredTaskTags(): string[] {
 }
 
 function buildTaskRegex(): RegExp {
-    const tags = configuredTaskTags();    
+    const tags = configuredTaskTags();
     const commentPrefixes = [
         '\\/\\/',    // //
         '#',         // #
@@ -60,6 +60,7 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
     const taskRegex = buildTaskRegex();
 
     for (const file of filesToScan) {
+        if (file.fsPath.includes('/node_modules/')) continue;
         try {
             const document = await vscode.workspace.openTextDocument(file);
             for (let i = 0; i < document.lineCount; i++) {

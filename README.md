@@ -55,4 +55,5 @@ ollama pull codellama
 ```json
 "intelligentTasks.ollamaUrl": "http://localhost:11434",
 "intelligentTasks.aiModel": "codellama"
+"intelligentTasks.contextLines": 15
 ```

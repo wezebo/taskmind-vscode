@@ -144,6 +144,13 @@
           "type": "string",
           "default": "codellama",
           "description": "Модель для использования в Ollama"
+        },
+        "intelligentTasks.contextLines": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Количество строк контекста кода вокруг задачи, которое будет использоваться для ИИ-анализа"
         }
       }
     }
