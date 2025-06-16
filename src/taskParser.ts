@@ -46,10 +46,9 @@ function buildTaskRegex(): RegExp {
 // <!-- TODO: HTML -->
 
 export async function scanWorkspaceForTasks(): Promise<Task[]> {
-    const tasks: Task[] = [];
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
-        return tasks;
+        return [];
     }
 
     const filesToScan = await vscode.workspace.findFiles(
@@ -59,10 +58,13 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
 
     const taskRegex = buildTaskRegex();
 
-    for (const file of filesToScan) {
-        if (file.fsPath.includes('/node_modules/')) continue;
+    const tasksPromises = filesToScan.map(async (file: vscode.Uri) => {
+        if (file.fsPath.includes('/node_modules/')) return [];
+        
         try {
             const document = await vscode.workspace.openTextDocument(file);
+            const fileTasks: Task[] = [];
+
             for (let i = 0; i < document.lineCount; i++) {
                 const line = document.lineAt(i);
                 let match;
@@ -79,7 +81,7 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                     }
 
                     if (taskText) {
-                        tasks.push({
+                        fileTasks.push({
                             id: `${file.fsPath}-${i}-${match.index}`,
                             text: taskText,
                             type: tagType as Task['type'],
@@ -93,9 +95,13 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                     }
                 }
             }
+            return fileTasks;
         } catch (error) {
             console.error(`Ошибка при парсинге файла ${file.fsPath}:`, error);
+            return [];
         }
-    }
-    return tasks;
+    });
+
+    const results = await Promise.all(tasksPromises);
+    return results.flat();
 }
