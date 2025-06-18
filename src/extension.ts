@@ -5,6 +5,7 @@ import { Task } from './models';
 import { Ollama } from "ollama";
 
 let taskProvider: TaskProvider;
+let tasksTreeView: vscode.TreeView<vscode.TreeItem>;
 const VALID_PRIORITIES_FOR_SETTING: Array<Task['priority']> = ['low', 'medium', 'high'];
 const DEFAULT_PRIORITY_FOR_PARSING = 'medium';
 
@@ -66,7 +67,10 @@ export function activate(context: vscode.ExtensionContext) {
         : undefined;
 
     taskProvider = new TaskProvider(rootPath);
-    vscode.window.registerTreeDataProvider('intelligentTasksView', taskProvider);
+    tasksTreeView = vscode.window.createTreeView('intelligentTasksView', {
+        treeDataProvider: taskProvider
+    });
+    context.subscriptions.push(tasksTreeView);
 
     context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.scanWorkspace', async () => {
         vscode.window.withProgress({
@@ -85,6 +89,14 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.markAsDone', async (item: vscode.TreeItem | {
         taskData: Task
     }) => {
+        // If called from keyboard shortcut, get the selected item
+        if (!item) {
+            const selection = tasksTreeView.selection[0];
+            if (selection instanceof ProviderTaskItem) {
+                item = selection;
+            }
+        }
+
         const taskData = (item as ProviderTaskItem)?.taskData;
 
         if (taskData) {
@@ -169,6 +181,14 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('intelligentTasks.getAISuggestion', async (item: ProviderTaskItem) => {
+        // If called from keyboard shortcut, get the selected item
+        if (!item) {
+            const selection = tasksTreeView.selection[0];
+            if (selection instanceof ProviderTaskItem) {
+                item = selection;
+            }
+        }
+
         if (!item || !item.taskData) {
             vscode.window.showErrorMessage('Задача не выбрана.');
             return;
