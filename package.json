@@ -76,6 +76,12 @@
         "title": "Закрепить/Открепить задачу",
         "category": "Intelligent Tasks",
         "icon": "$(star-full)"
+      },
+      {
+        "command": "intelligentTasks.searchTasks",
+        "title": "Поиск задач",
+        "category": "Intelligent Tasks",
+        "icon": "$(search)"
       }
     ],
     "menus": {
@@ -94,6 +100,11 @@
           "command": "intelligentTasks.filterByPriority",
           "when": "view == intelligentTasksView",
           "group": "navigation@2"
+        },
+        {
+          "command": "intelligentTasks.searchTasks",
+          "when": "view == intelligentTasksView",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -200,6 +211,12 @@
         "command": "intelligentTasks.togglePinned",
         "key": "ctrl+i p",
         "mac": "cmd+i p",
+        "when": "intelligentTasksView"
+      },
+      {
+        "command": "intelligentTasks.searchTasks",
+        "key": "ctrl+i s",
+        "mac": "cmd+i s",
         "when": "intelligentTasksView"
       }
     ]

@@ -76,8 +76,9 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     private currentFilterType?: string;
     private currentFilterPriority?: string;
+    private currentSearchQuery?: string;
 
-    constructor(private workspaceRoot: string | undefined) {}
+  constructor(private workspaceRoot: string | undefined) {}
 
     public refresh(tasks: Task[]): void {
         this._allTasks = tasks;
@@ -92,6 +93,11 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     public filterByPriority(priority?: string): void {
         this.currentFilterPriority = priority;
         this._onDidChangeTreeData.fire();
+    }
+
+    public filterBySearchQuery(query?: string): void {
+      this.currentSearchQuery = query;
+      this._onDidChangeTreeData.fire();
     }
 
     public updateTask(updatedTask: Task) {
@@ -121,6 +127,17 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
         if (this.currentFilterPriority && this.currentFilterPriority !== 'ВСЕ ПРИОРИТЕТЫ') {
             tasksToDisplay = tasksToDisplay.filter(task => (task.priority || 'N/A').toLowerCase() === this.currentFilterPriority?.toLowerCase());
         }
+
+      if (this.currentSearchQuery && this.currentSearchQuery.trim() !== '') {
+        const searchQuery = this.currentSearchQuery.toLowerCase().trim();
+        tasksToDisplay = tasksToDisplay.filter(
+            (task) =>
+                task.text.toLowerCase().includes(searchQuery) ||
+                task.type.toLowerCase().includes(searchQuery) ||
+                (task.priority || '').toLowerCase().includes(searchQuery) ||
+                path.basename(task.fileName).toLowerCase().includes(searchQuery)
+        );
+      }
 
         if (element instanceof TaskItem && element.taskData.aiSuggestions) {
             return Promise.resolve(
