@@ -70,6 +70,12 @@
         "title": "Intelligent Tasks: Получить ИИ-предложение",
         "category": "Intelligent Tasks",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "intelligentTasks.togglePinned",
+        "title": "Закрепить/Открепить задачу",
+        "category": "Intelligent Tasks",
+        "icon": "$(star-full)"
       }
     ],
     "menus": {
@@ -105,6 +111,11 @@
           "command": "intelligentTasks.getAISuggestion",
           "when": "view == intelligentTasksView && viewItem == taskItem",
           "group": "ai"
+        },
+        {
+          "command": "intelligentTasks.togglePinned",
+          "when": "view == intelligentTasksView && viewItem == taskItem",
+          "group": "inline"
         }
       ]
     },
@@ -183,6 +194,12 @@
         "command": "intelligentTasks.filterByPriority",
         "key": "ctrl+i r",
         "mac": "cmd+i r",
+        "when": "intelligentTasksView"
+      },
+      {
+        "command": "intelligentTasks.togglePinned",
+        "key": "ctrl+i p",
+        "mac": "cmd+i p",
         "when": "intelligentTasksView"
       }
     ]

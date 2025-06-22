@@ -215,6 +215,47 @@ export function activate(context: vscode.ExtensionContext) {
             showSuggestionPanel(task, suggestion);
         }
     ));
+
+  context.subscriptions.push(
+      vscode.commands.registerCommand(
+          'intelligentTasks.togglePinned',
+          async (item: ProviderTaskItem) => {
+            if (!item) {
+              const selection = tasksTreeView.selection[0];
+              if (selection instanceof ProviderTaskItem) {
+                item = selection;
+              }
+            }
+
+            if (!item || !item.taskData) {
+              vscode.window.showErrorMessage('Задача не выбрана.');
+              return;
+            }
+
+            const task = item.taskData;
+            const commentUpdated = await toggleTaskPinnedStatus(task);
+
+            if (commentUpdated) {
+              const taskInProvider = taskProvider.allTasks.find(
+                  (t) => t.id === task.id
+              );
+              if (taskInProvider) {
+                taskInProvider.pinned = !taskInProvider.pinned;
+                taskProvider.updateTask(taskInProvider);
+                vscode.window.showInformationMessage(
+                    `Задача "${task.text.substring(0, 20)}..." ${
+                        taskInProvider.pinned ? 'закреплена' : 'откреплена'
+                    }.`
+                );
+              }
+            } else {
+              vscode.window.showWarningMessage(
+                  `Не удалось обновить статус закрепления задачи в файле.`
+              );
+            }
+          }
+      )
+  );
 }
 
 
@@ -331,4 +372,71 @@ function escapeHtml(unsafe: string): string {
 
 export function deactivate() {
     console.log('Расширение "intelligent-tasks-plugin" деактивировано.');
+}
+
+async function toggleTaskPinnedStatus(task: Task): Promise<boolean> {
+  try {
+    const document = await vscode.workspace.openTextDocument(task.fileName);
+    const line = document.lineAt(task.lineNumber - 1);
+    const lineText = line.text;
+
+    const taskTypePattern = new RegExp(`\\b${task.type.toUpperCase()}\\b`, 'i');
+    const typeMatch = taskTypePattern.exec(lineText);
+
+    if (!typeMatch) {
+      console.error('Тип задачи не найден в строке: ', lineText);
+      return false;
+    }
+
+    const typeEndPos = typeMatch.index + task.type.length;
+
+    const beforeType = lineText.substring(0, typeEndPos);
+    let afterType = lineText.substring(typeEndPos);
+
+    const afterTypePattern =
+        /^(\s*)(?:\((\s*(?:low|medium|high)\s*)\))?\s*(\*)?(\s*[:\s]?.+)$/i;
+    const afterMatch = afterTypePattern.exec(afterType);
+
+    if (!afterMatch) {
+      console.error('Не найден контент после типа задачи', afterType);
+      return false;
+    }
+
+    const spaceAfterType = afterMatch[1] || '';
+    const priority = afterMatch[2] || '';
+    const pinnedMarker = afterMatch[3] || '';
+    const taskContent = afterMatch[4];
+
+    const newPinnedMarker = pinnedMarker ? '' : '*';
+
+    let newAfterType = spaceAfterType;
+
+    if (priority) {
+      newAfterType += `(${priority})`;
+    }
+
+    newAfterType += newPinnedMarker;
+
+    newAfterType += taskContent;
+
+    const newLineText = beforeType + newAfterType;
+
+    if (newLineText !== lineText) {
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, line.range, newLineText);
+      await vscode.workspace.applyEdit(edit);
+      await document.save();
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(
+        'Ошибка при обновлении статуса закрепления задачи в файле:',
+        error
+    );
+    vscode.window.showErrorMessage(
+        'Не удалось обновить статус закрепления задачи в файле'
+    );
+    return false;
+  }
 }

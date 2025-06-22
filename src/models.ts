@@ -9,4 +9,5 @@ export interface Task {
   createdAt: string;
   status: 'open' | 'done';
   aiSuggestions?: string[];
+  pinned: boolean;
 }
