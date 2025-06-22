@@ -256,6 +256,25 @@ export function activate(context: vscode.ExtensionContext) {
           }
       )
   );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'intelligentTasks.searchTasks',
+            async () => {
+                const searchQuery = await vscode.window.showInputBox({
+                    placeHolder: 'Введите текст для поиска задач',
+                    prompt:
+                        'Поиск будет производиться по тексту задачи, типу, приоритету и имени файла',
+                });
+
+                if (searchQuery !== undefined) {
+                    taskProvider.filterBySearchQuery(
+                        searchQuery.trim() === '' ? undefined : searchQuery
+                    );
+                }
+            }
+        )
+    );
 }
 
 
