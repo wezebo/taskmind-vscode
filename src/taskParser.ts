@@ -31,8 +31,10 @@ function buildTaskRegex(): RegExp {
         `\\b` +                                       // 5. Граница слова
         `\\s*` +                                      // 6. Пробелы
         `(?:\\(\\s*(${VALID_PRIORITIES.join('|')})\\s*\\))?` + // 7. ГРУППА 2 (внутри): Приоритет
-        `\\s*[:\\s]?` +                               // 8. Двоеточие/пробелы
-        `(.*)`;                                       // 9. ГРУППА 3: Текст задачи
+        `\\s*` +                                      // 8. Пробелы
+        `(\\*)?` +                                    // 9. ГРУППА 3 (опционально): Звездочка для закрепления
+        `\\s*[:\\s]?` +                               // 10. Двоеточие/пробелы
+        `(.*)`;                                       // 11. ГРУППА 4: Текст задачи
 
     return new RegExp(pattern, 'gmi');
 }
@@ -44,6 +46,7 @@ function buildTaskRegex(): RegExp {
 // % REMARK: LaTeX
 // * NOTE: Javadoc
 // <!-- TODO: HTML -->
+// // TODO: закрепленная задача
 
 export async function scanWorkspaceForTasks(): Promise<Task[]> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -72,7 +75,8 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                 while ((match = taskRegex.exec(line.text)) !== null) {
                     const tagType = match[1].toUpperCase();
                     const parsedPriority = match[2] ? match[2].toLowerCase() : DEFAULT_PRIORITY;
-                    let taskText = match[3].trim();
+                    const isPinned = match[3] === '*';
+                    let taskText = match[4].trim();
 
                     if (taskText.endsWith('*/')) {
                         taskText = taskText.substring(0, taskText.length - 2).trim();
@@ -91,6 +95,7 @@ export async function scanWorkspaceForTasks(): Promise<Task[]> {
                             isCompleted: false,
                             createdAt: new Date().toISOString(),
                             status: 'open',
+                            pinned: isPinned,
                         });
                     }
                 }

@@ -26,13 +26,13 @@ class GroupItem extends vscode.TreeItem {
 }
 
 export class TaskItem extends vscode.TreeItem {
-    constructor(
-        public readonly taskData: Task
-    ) {
-        super(taskData.text, vscode.TreeItemCollapsibleState.None);
-        this.description = `(${taskData.type}) P: ${taskData.priority || 'N/A'}`;
-        this.tooltip = `${path.basename(taskData.fileName)}:${taskData.lineNumber}\nСтатус: ${taskData.status}\nПриоритет: ${taskData.priority || 'N/A'}`;
-        this.contextValue = 'taskItem';
+  constructor(public readonly taskData: Task) {
+    const displayText = taskData.pinned ? `★ ${taskData.text}` : taskData.text;
+    super(displayText, vscode.TreeItemCollapsibleState.None);
+
+    this.description = `(${taskData.type}) P: ${taskData.priority || 'N/A'}`;
+    this.tooltip = `${path.basename(taskData.fileName)}:${ taskData.lineNumber }\nСтатус: ${taskData.status}\nПриоритет: ${taskData.priority || 'N/A'}${ taskData.pinned ? '\n✓ Закреплено' : '' }`;
+    this.contextValue = 'taskItem';
 
         if (taskData.status === 'done') {
             this.iconPath = new vscode.ThemeIcon('check');
@@ -140,7 +140,13 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
         }
 
         if (element instanceof GroupItem) {
-            return Promise.resolve(element.children);
+          element.children.sort((a, b) => {
+            if (a.taskData.pinned !== b.taskData.pinned) {
+              return a.taskData.pinned ? -1 : 1;
+            }
+            return a.taskData.text.localeCompare(b.taskData.text);
+          });
+          return Promise.resolve(element.children);
         } else {
             const groupedByFile: { [filePath: string]: TaskItem[] } = {};
             tasksToDisplay.forEach(task => {
@@ -150,18 +156,27 @@ export class TaskProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
                 groupedByFile[task.fileName].push(new TaskItem(task));
             });
 
-            const groupItems = Object.keys(groupedByFile).map(filePath => {
-                const relativePath = vscode.workspace.asRelativePath(filePath, false);
-                const groupItem = new GroupItem(
-                    `${relativePath} (${groupedByFile[filePath].length})`,
-                    vscode.TreeItemCollapsibleState.Collapsed,
-                    'file',
-                    filePath
-                );
-                groupItem.children = groupedByFile[filePath];
-                return groupItem;
-            });
-            return Promise.resolve(groupItems.sort((a, b) => a.label.localeCompare(b.label))); // Сортируем файлы
-        }
+      Object.keys(groupedByFile).forEach((filePath) => {
+        groupedByFile[filePath].sort((a, b) => {
+          if (a.taskData.pinned !== b.taskData.pinned) {
+            return a.taskData.pinned ? -1 : 1;
+          }
+          return a.taskData.text.localeCompare(b.taskData.text);
+        });
+      });
+
+      const groupItems = Object.keys(groupedByFile).map((filePath) => {
+        const relativePath = vscode.workspace.asRelativePath(filePath, false);
+        const groupItem = new GroupItem(
+          `${relativePath} (${groupedByFile[filePath].length})`,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          'file',
+          filePath
+        );
+        groupItem.children = groupedByFile[filePath];
+        return groupItem;
+      });
+      return Promise.resolve(groupItems.sort((a, b) => a.label.localeCompare(b.label))); // Сортируем файлы
     }
+  }
 }
