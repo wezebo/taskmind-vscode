@@ -2,8 +2,6 @@ name: Run VSCode Extension Tests
 
 on:
   push:
-env:
-  DISPLAY: ":1"
 
 jobs:
   test:
@@ -38,8 +36,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Compile
-        run: npm run compile:test
-
-      - name: Run tests
-        run: npm run test
+      - name: Run headless test
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: npm run test
