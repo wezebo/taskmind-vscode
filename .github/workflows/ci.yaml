@@ -2,6 +2,8 @@ name: Run VSCode Extension Tests
 
 on:
   push:
+env:
+  DISPLAY: :1
 
 jobs:
   test:
@@ -40,4 +42,6 @@ jobs:
         run: npm run compile:test
 
       - name: Run tests
+        with:
+          DISPLAY::1
         run: npm run test
