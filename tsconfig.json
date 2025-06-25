@@ -2,10 +2,15 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2020",
-    "outDir": "dist",
-    "rootDir": "src",
+    "outDir": "out",
+    "rootDir": ".",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": [
+      "node",
+      "mocha",
+      "vscode"
+    ]
   },
   "exclude": ["node_modules", ".vscode-test"]
 }
