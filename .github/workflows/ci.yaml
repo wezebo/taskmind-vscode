@@ -3,7 +3,7 @@ name: Run VSCode Extension Tests
 on:
   push:
 env:
-  DISPLAY: :1
+  DISPLAY: ":1"
 
 jobs:
   test:
