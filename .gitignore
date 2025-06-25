@@ -29,3 +29,5 @@ dist-ssr
 *.sw?
 .eslintcache
 .DS_Store
+
+out
