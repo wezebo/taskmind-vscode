@@ -42,6 +42,4 @@ jobs:
         run: npm run compile:test
 
       - name: Run tests
-        with:
-          DISPLAY::1
         run: npm run test
